@@ -112,14 +112,20 @@ export const reconcileData = async (
     "${userInstructions}"
 
     Goal:
-    Write and execute Python code to perform the analysis requested by the user.
-    Load the data into pandas DataFrames (create the dataframes directly from the provided JSON data).
-    Perform the comparison/join/reconciliation.
+    1. Write and execute Python code to perform the analysis requested by the user.
+    2. Load the data into pandas DataFrames.
+    3. Perform the comparison/join/reconciliation.
     
-    IMPORTANT OUTPUT INSTRUCTION:
-    1. Print the results in a clear, readable format. 
-    2. If you are generating a table of data (e.g. matched invoices, discrepancies), ALWAYS print it as a Markdown Table.
-    3. Provide a summary text explanation of what was done and what was found.
+    IMPORTANT OUTPUT INSTRUCTIONS:
+    1. Print the text report results in a clear, readable format.
+    2. Do NOT include the python code or code blocks in the text response/report. Only show the analysis results and summary tables.
+    3. If you are generating a summary table for the report, ALWAYS print it as a Markdown Table.
+    4. EXPORT REQUIREMENT: Create a "Full Outer Join" DataFrame of the Extracted Data and Reference Data (matching on the most logical columns like Invoice Number or Amount). 
+       - Ensure the 'fileName' column from the Extracted Data is preserved in this joined dataframe (call it 'fileName' or 'Source_File').
+       - Convert this joined DataFrame to a list of dictionaries (JSON records).
+       - Print this JSON string wrapped specifically in <JSON_RESULT> and </JSON_RESULT> tags. 
+       - This is crucial for the Excel export feature.
+    5. Provide a summary text explanation of what was done and what was found.
   `;
 
   try {
@@ -141,7 +147,18 @@ export const reconcileData = async (
     
     const code = codeBlocks.join('\n\n# ---------------------------------------------------------\n# Next Code Block\n# ---------------------------------------------------------\n\n');
 
-    return { report, code };
+    // Extract JSON data from the text response
+    let joinedData = undefined;
+    const jsonMatch = report.match(/<JSON_RESULT>([\s\S]*?)<\/JSON_RESULT>/);
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        joinedData = JSON.parse(jsonMatch[1]);
+      } catch (e) {
+        console.error("Failed to parse joined data JSON from model response", e);
+      }
+    }
+
+    return { report, code, joinedData };
 
   } catch (error) {
     console.error("Reconciliation Error:", error);

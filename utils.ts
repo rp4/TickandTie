@@ -221,7 +221,7 @@ export const exportToZip = async (
   }
 
   const zip = new window.JSZip();
-  const folderName = "annotated_documents"; // Renamed to reflect content
+  const folderName = "annotated_documents"; 
   const docsFolder = zip.folder(folderName);
 
   // Handle duplicate filenames
@@ -256,7 +256,7 @@ export const exportToZip = async (
       if (doc.annotatedBlob) {
         docsFolder.file(uniqueName, doc.annotatedBlob);
       } else {
-        // Fallback to original file if no annotation available (e.g. failed extraction)
+        // Fallback to original file if no annotation available
         docsFolder.file(uniqueName, doc.file);
       }
     }
@@ -264,57 +264,52 @@ export const exportToZip = async (
 
   const workbook = window.XLSX.utils.book_new();
 
-  // --- Sheet 1: Audit Data (Tick) ---
-  const headers = [
-    "File Name", 
-    "Status", 
-    ...fields.map(f => f.name), 
-    ...fields.map(f => `${f.name} (Coords)`)
-  ];
-
-  const dataRows = documents.map(doc => {
-    const row: Record<string, any> = {};
-    // Use original filename for display row, but link will point to annotated file
-    row["File Name"] = doc.fileName; 
-    row["Status"] = doc.status;
+  // If we have a structured join result, use that as the first sheet
+  if (reconcileResult && reconcileResult.joinedData && reconcileResult.joinedData.length > 0) {
+    // --- Tab 1: Full Outer Join (Reconciliation Data) ---
+    const joinedSheet = window.XLSX.utils.json_to_sheet(reconcileResult.joinedData);
     
-    fields.forEach(field => {
-      const extracted = doc.data[field.key];
-      row[field.name] = extracted?.value || '';
-      row[`${field.name} (Coords)`] = extracted?.box_2d ? JSON.stringify(extracted.box_2d) : '';
-    });
-    return row;
-  });
+    // Try to find a column named 'fileName' or 'source_file' (case-insensitive) to add hyperlinks
+    const sampleRow = reconcileResult.joinedData[0];
+    const keys = Object.keys(sampleRow);
+    const fileNameKey = keys.find(k => 
+      k.toLowerCase().includes('filename') || 
+      k.toLowerCase().includes('file name') ||
+      k.toLowerCase().includes('source_file')
+    );
+    
+    // Get column index for the file name
+    const fileNameColIdx = fileNameKey ? keys.indexOf(fileNameKey) : -1;
 
-  const worksheet = window.XLSX.utils.json_to_sheet(dataRows, { header: headers });
-
-  // Add Hyperlinks
-  const range = window.XLSX.utils.decode_range(worksheet['!ref']);
-  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-    const docIndex = R - 1; 
-    if (docIndex < documents.length) {
-      const doc = documents[docIndex];
-      const uniqueName = filenameMap.get(doc.id);
-      
-      if (uniqueName) {
-        const cellRef = window.XLSX.utils.encode_cell({ c: 0, r: R }); // Column 0
-        if (!worksheet[cellRef]) {
-            worksheet[cellRef] = { t: 's', v: doc.fileName };
+    if (fileNameColIdx !== -1) {
+      const range = window.XLSX.utils.decode_range(joinedSheet['!ref']);
+      // Start from R=1 (skip header)
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const cellRef = window.XLSX.utils.encode_cell({ c: fileNameColIdx, r: R });
+        const cell = joinedSheet[cellRef];
+        
+        if (cell && cell.v) {
+          const cellValue = cell.v.toString();
+          
+          // Find the document that matches this filename
+          const doc = documents.find(d => d.fileName === cellValue);
+          
+          if (doc) {
+            const uniqueName = filenameMap.get(doc.id);
+            if (uniqueName) {
+              // Add hyperlink
+              if (!joinedSheet[cellRef]) joinedSheet[cellRef] = { t: 's', v: cellValue };
+              joinedSheet[cellRef].l = { Target: `${folderName}/${uniqueName}` };
+              // Make it look like a link
+              // Note: SheetJS Basic Styling (font color) is part of Pro version, but hyperlink works in CE
+            }
+          }
         }
-        worksheet[cellRef].l = { Target: `${folderName}/${uniqueName}` };
       }
     }
-  }
-  window.XLSX.utils.book_append_sheet(workbook, worksheet, "Source Data (Tick)");
+    window.XLSX.utils.book_append_sheet(workbook, joinedSheet, "Reconciliation Data");
 
-  // --- Sheet 2+: Reconcile Data ---
-  if (reconcileResult) {
-    const parsedTable = parseMarkdownTable(reconcileResult.report);
-    if (parsedTable) {
-      const sheet = window.XLSX.utils.aoa_to_sheet(parsedTable);
-      window.XLSX.utils.book_append_sheet(workbook, sheet, "Joined Data Details");
-    }
-
+    // --- Tab 2: Report Summary ---
     const reportSheet = window.XLSX.utils.aoa_to_sheet([
       ["Analysis Report"],
       [reconcileResult.report]
@@ -323,6 +318,7 @@ export const exportToZip = async (
     reportSheet['!cols'][0] = { wch: 100 }; 
     window.XLSX.utils.book_append_sheet(workbook, reportSheet, "Analysis Report");
 
+    // --- Tab 3: Python Code ---
     const codeSheet = window.XLSX.utils.aoa_to_sheet([
       ["Executed Python Code"],
       [reconcileResult.code]
@@ -330,6 +326,66 @@ export const exportToZip = async (
     if (!codeSheet['!cols']) codeSheet['!cols'] = [];
     codeSheet['!cols'][0] = { wch: 100 };
     window.XLSX.utils.book_append_sheet(workbook, codeSheet, "Python Code");
+
+  } else {
+    // Default / Fallback: Tick Phase Export
+    // --- Sheet 1: Audit Data (Tick) ---
+    const headers = [
+      "File Name", 
+      "Status", 
+      ...fields.map(f => f.name), 
+      ...fields.map(f => `${f.name} (Coords)`)
+    ];
+
+    const dataRows = documents.map(doc => {
+      const row: Record<string, any> = {};
+      // Use original filename for display row, but link will point to annotated file
+      row["File Name"] = doc.fileName; 
+      row["Status"] = doc.status;
+      
+      fields.forEach(field => {
+        const extracted = doc.data[field.key];
+        row[field.name] = extracted?.value || '';
+        row[`${field.name} (Coords)`] = extracted?.box_2d ? JSON.stringify(extracted.box_2d) : '';
+      });
+      return row;
+    });
+
+    const worksheet = window.XLSX.utils.json_to_sheet(dataRows, { header: headers });
+
+    // Add Hyperlinks
+    const range = window.XLSX.utils.decode_range(worksheet['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      const docIndex = R - 1; 
+      if (docIndex < documents.length) {
+        const doc = documents[docIndex];
+        const uniqueName = filenameMap.get(doc.id);
+        
+        if (uniqueName) {
+          const cellRef = window.XLSX.utils.encode_cell({ c: 0, r: R }); // Column 0
+          if (!worksheet[cellRef]) {
+              worksheet[cellRef] = { t: 's', v: doc.fileName };
+          }
+          worksheet[cellRef].l = { Target: `${folderName}/${uniqueName}` };
+        }
+      }
+    }
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Source Data (Tick)");
+    
+    // Only append Report/Code if available (e.g. analysis ran but didn't produce joined dataframe)
+    if (reconcileResult) {
+      const reportSheet = window.XLSX.utils.aoa_to_sheet([
+        ["Analysis Report"],
+        [reconcileResult.report]
+      ]);
+      window.XLSX.utils.book_append_sheet(workbook, reportSheet, "Analysis Report");
+
+      const codeSheet = window.XLSX.utils.aoa_to_sheet([
+        ["Executed Python Code"],
+        [reconcileResult.code]
+      ]);
+      window.XLSX.utils.book_append_sheet(workbook, codeSheet, "Python Code");
+    }
   }
 
   const excelBuffer = window.XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });

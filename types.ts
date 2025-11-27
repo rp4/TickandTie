@@ -29,6 +29,7 @@ export interface DocumentResult {
 export interface ReconcileResult {
   report: string;
   code: string;
+  joinedData?: any[];
 }
 
 export const COLORS = [

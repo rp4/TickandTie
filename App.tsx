@@ -27,7 +27,7 @@ const App: React.FC = () => {
   // Reconcile / Tie State
   const [referenceData, setReferenceData] = useState<any[]>([]);
   const [referenceFileName, setReferenceFileName] = useState<string | null>(null);
-  const [reconcilePrompt, setReconcilePrompt] = useState("Compare the 'Total Amount' extracted from documents with the 'Amount' column in the reference dataset. List any invoices that match and those that have discrepancies.");
+  const [reconcilePrompt, setReconcilePrompt] = useState("Compare the datasets and highlight any differences");
   const [isReconciling, setIsReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState<ReconcileResult | null>(null);
 
