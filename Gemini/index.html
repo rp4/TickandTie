@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tick & Tie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip for Zip creation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- PDF.js for rendering PDF previews -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <!-- SheetJS for Excel Export and Import -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- Marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      body {
+        background-color: #f8fafc;
+        font-family: 'Inter', sans-serif;
+      }
+      /* Custom scrollbar for table */
+      .custom-scrollbar::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      /* Markdown Styles */
+      .prose h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+      .prose h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; }
+      .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
+      .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+      .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+      .prose table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+      .prose th, .prose td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; }
+      .prose th { background-color: #f8fafc; font-weight: 600; }
+      .prose pre { background-color: #1e293b; color: #e2e8f0; padding: 1rem; rounded: 0.5rem; overflow-x: auto; margin-bottom: 1rem; border-radius: 0.5rem; }
+      .prose code { font-family: monospace; background-color: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 0.25rem; }
+      .prose pre code { background-color: transparent; padding: 0; color: inherit; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

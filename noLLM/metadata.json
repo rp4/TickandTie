@@ -1,0 +1,5 @@
+{
+  "name": "Tick & Tie",
+  "description": "An internal audit tool to extract specific fields from multiple documents (PDF/Images) using Gemini 2.5, visualize extracted data with bounding boxes, and export results to Excel.",
+  "requestFramePermissions": []
+}
